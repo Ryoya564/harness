@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "type": "command", "command": "python3 _harness/hooks/session_start.py", "cwd": ".", "timeoutSec": 30 }
+    ],
+    "agentStop": [
+      { "type": "command", "command": "python3 _harness/hooks/stop_check.py", "cwd": ".", "timeoutSec": 30 }
+    ],
+    "sessionEnd": [
+      { "type": "command", "command": "python3 _harness/hooks/session_end.py", "cwd": ".", "timeoutSec": 30 }
+    ],
+    "preToolUse": [
+      { "type": "command", "command": "python3 _harness/hooks/guard.py", "cwd": ".", "timeoutSec": 10 }
+    ]
+  }
+}
