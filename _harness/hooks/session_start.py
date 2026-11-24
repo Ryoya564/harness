@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _common  # noqa: E402
+import stop_check  # noqa: E402
 from _common import lib  # noqa: E402
 
 DOCTOR_INTERVAL = 7 * 24 * 3600
@@ -62,6 +63,8 @@ def _doctor_section(now: float) -> str:
 
 def build_context(payload: dict, now: float) -> str:
     sid = payload.get("session_id") or "不明"
+    if payload.get("session_id") and re.fullmatch(r"[A-Za-z0-9._-]+", sid):
+        stop_check.mark_session_start(sid, now)
     tasks = lib.all_tasks()
     open_tasks = [t for t in tasks if t.get("status") in ("open", "in_progress")]
     parts = [

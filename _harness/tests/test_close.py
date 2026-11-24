@@ -22,6 +22,13 @@ class VerifyCloseTest(unittest.TestCase):
         self.assertEqual(lib.read_task(self.tid)[0]["verify"], "pass")
         self.assertIn("verify (exit 0)", self.log())
 
+    def test_verify_keeps_index_in_sync(self):
+        import doctor
+        import time
+        time.sleep(1.1)
+        verify.run(self.tid)
+        self.assertFalse([f for f in doctor.run_checks(self.root) if "INDEX" in f.what])
+
     def test_verify_fail_updates_task(self):
         helpers.set_verify(self.root, "false")
         self.assertEqual(verify.run(self.tid), 1)
@@ -81,6 +88,23 @@ class VerifyCloseTest(unittest.TestCase):
         files = helpers.git(self.root, "show", "--name-only", "--format=", "HEAD")
         self.assertIn("_harness/journal/", files)
         self.assertNotIn("other.txt", files)
+
+    def test_harness_commit_excludes_prestaged(self):
+        helpers.git(self.root, "init", "-q", "-b", "main")
+        (self.root / "notes.txt").write_text("x\n", encoding="utf-8")
+        helpers.git(self.root, "add", "notes.txt")
+        self.assertEqual(close_task.close(self.tid), 0)
+        files = helpers.git(self.root, "show", "--name-only", "--format=", "HEAD")
+        self.assertNotIn("notes.txt", files)
+        self.assertIn("notes.txt", helpers.git(self.root, "diff", "--cached", "--name-only"))
+
+    def test_close_skips_repo_commit_when_other_task_open(self):
+        other = new_task.create("別タスク", "feature", "demo", session="s2")
+        (self.repo / "fix.txt").write_text("fixed\n", encoding="utf-8")
+        self.assertEqual(close_task.close(self.tid), 0)
+        self.assertEqual(helpers.git(self.repo, "rev-list", "--count", "HEAD").strip(), "1")
+        self.assertIn(other, self.log())
+        self.assertIn("fix.txt", self.log())
 
     def test_drop(self):
         self.assertEqual(close_task.close(self.tid, drop_reason="不要"), 0)

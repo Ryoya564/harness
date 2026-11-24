@@ -67,6 +67,28 @@ def dirty_files(repo: Path) -> list[tuple[str, float]]:
     return out
 
 
+def _starts_path() -> Path:
+    return lib.state_dir() / "session-starts.json"
+
+
+def mark_session_start(session_id: str, when: float) -> None:
+    p = _starts_path()
+    try:
+        data = json.loads(lib.read_text(p)) if p.exists() else {}
+    except json.JSONDecodeError:
+        data = {}
+    data.setdefault(session_id, when)
+    lib.write_text(p, json.dumps(data, indent=1))
+
+
+def session_start_time(session_id: str) -> float | None:
+    p = _starts_path()
+    try:
+        return json.loads(lib.read_text(p)).get(session_id) if p.exists() else None
+    except json.JSONDecodeError:
+        return None
+
+
 def _fingerprint(tag: str, files: list[tuple[str, float]] | set[str]) -> str:
     items = sorted(f"{p}:{m}" for p, m in files) if isinstance(files, list) else sorted(files)
     return hashlib.sha256((tag + "|" + "\n".join(items)).encode()).hexdigest()[:16]
@@ -94,8 +116,10 @@ def evaluate(payload: dict, now: float) -> dict | None:
         # 未記録の変更は git の dirty で拾う。
         edits = set() if lib.session_tasks(sid) else edited_repo_paths(
             payload.get("transcript_path"))
+        # 他セッションの作業残りで質問だけのセッションを止めないよう、開始後に変わったものだけ数える
+        start = session_start_time(sid) or 0.0
         dirty = [d for r in sorted((lib.harness_root() / "repos").glob("*/"))
-                 for d in dirty_files(r)]
+                 for d in dirty_files(r) if d[1] >= start]
         if edits or dirty:
             hits.append((_fingerprint("a", dirty) + _fingerprint("a", edits),
                          "repos/ を変更していますがタスクが割り当てられていません。"

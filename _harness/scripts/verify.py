@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build_index  # noqa: E402
 import lib  # noqa: E402
 
 TAIL_LINES = 40
@@ -33,6 +34,7 @@ def run(task_id: str) -> int:
         body += f"\n\nstderr:\n\n```\n{_tail(proc.stderr)}\n```"
     lib.append_log(task_id, f"verify (exit {code})", body)
     lib.update_task(task_id, verify="pass" if code == 0 else "fail")
+    build_index.write_index()
     return code
 
 

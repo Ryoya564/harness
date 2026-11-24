@@ -14,7 +14,8 @@ def record(payload: dict) -> None:
     sid = payload.get("session_id")
     if not sid:
         return
-    task_id = lib.get_active(sid)
+    active = lib.get_active(sid)
+    task_id = active
     if not task_id:
         recent = lib.session_tasks(sid)
         task_id = recent[0] if recent else None
@@ -32,9 +33,11 @@ def record(payload: dict) -> None:
                  "ended_at": lib.now_iso(), "reason": payload.get("reason"),
                  "task_id": task_id})
     lib.write_text(path, "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows))
-    if task_id:
+    if active:  # touched を更新するのは作業中のタスクだけ（close 済みは触らない）
         try:
-            lib.update_task(task_id)
+            lib.update_task(active)
+            import build_index  # noqa: PLC0415
+            build_index.write_index()
         except lib.HarnessError:
             pass
 

@@ -29,7 +29,7 @@ def _commit(cwd: Path, message: str, paths: list[str]) -> str:
     _git(cwd, "add", "-A", "--", *paths)
     if _git(cwd, "diff", "--cached", "--quiet").returncode == 0:
         return ""
-    res = _git(cwd, "commit", "-q", "-m", message)
+    res = _git(cwd, "commit", "-q", "-m", message, "--", *paths)
     if res.returncode != 0:
         raise lib.HarnessError(f"commit に失敗しました ({cwd}): {res.stderr.strip()}")
     return _git(cwd, "rev-parse", "--short", "HEAD").stdout.strip()
@@ -51,8 +51,18 @@ def close(task_id: str, drop_reason: str | None = None) -> int:
             print(f"{task_id}: verify が失敗したため完了にしません (exit {code})")
             return 1
         lib.update_task(task_id, status="done", closed=date.today().isoformat())
-        sha = _commit(lib.repo_dir(str(meta["repo"])), f"{task_id}: {meta['title']}", ["."])
-        lines.append(f"repo commit: {sha}" if sha else "repo commit: 変更なしのため省略")
+        repo = lib.repo_dir(str(meta["repo"]))
+        others = [str(t["id"]) for t in lib.all_tasks()
+                  if t.get("repo") == meta["repo"] and t.get("id") != task_id
+                  and t.get("status") in ("open", "in_progress")]
+        if others:
+            status = _git(repo, "status", "--porcelain").stdout.rstrip() or "（変更なし）"
+            lines.append(f"repo commit: 同じ repo に未完了タスク {', '.join(others)} があるため、"
+                         "変更が混ざらないよう自動 commit しない。このタスクのファイルだけを"
+                         f"手で commit すること。\n\n```\n{status}\n```")
+        else:
+            sha = _commit(repo, f"{task_id}: {meta['title']}", ["."])
+            lines.append(f"repo commit: {sha}" if sha else "repo commit: 変更なしのため省略")
         heading = "close (done)"
     else:
         lib.update_task(task_id, status="dropped", closed=date.today().isoformat())

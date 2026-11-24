@@ -75,7 +75,13 @@ class StopHookTest(unittest.TestCase):
         tr = self.transcript(self.root / "_harness/context/PROFILE.md")
         self.assertIsNone(stop_check.evaluate(self.payload(transcript=tr), self.now))
 
+    def test_a_ignores_dirty_from_before_session(self):
+        stop_check.mark_session_start("s9", self.now - 100)
+        self.touch_repo(mtime=self.now - 3600)
+        self.assertIsNone(stop_check.evaluate(self.payload("s9"), self.now))
+
     def test_a_dirty_repo_without_transcript_blocks(self):
+        stop_check.mark_session_start("s1", self.now - 100)
         self.touch_repo()
         res = stop_check.evaluate(self.payload(), self.now)
         self.assertIn("タスクが割り当てられていません", res["reason"])

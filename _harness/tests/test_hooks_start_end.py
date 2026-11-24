@@ -103,6 +103,25 @@ class SessionEndTest(unittest.TestCase):
         row = json.loads(self.jsonl.read_text().splitlines()[0])
         self.assertEqual(row["task_id"], tid)
 
+    def test_end_keeps_index_in_sync_and_closed_untouched(self):
+        import close_task
+        import doctor
+        tid = new_task.create("x", "chore", "demo", session="s1")
+        self.assertEqual(close_task.close(tid), 0)
+        touched = lib.read_task(tid)[0]["touched"]
+        time.sleep(1.1)
+        session_end.record({"session_id": "s1", "transcript_path": "/a", "reason": "exit"})
+        self.assertEqual(lib.read_task(tid)[0]["touched"], touched)
+        tid2 = new_task.create("y", "chore", "demo", session="s2")
+        time.sleep(1.1)
+        session_end.record({"session_id": "s2", "transcript_path": "/b", "reason": "exit"})
+        self.assertFalse([f for f in doctor.run_checks(self.root) if "INDEX" in f.what], tid2)
+
+    def test_start_records_session_start(self):
+        session_start.build_context({"session_id": "s7"}, 1234.5)
+        import stop_check
+        self.assertEqual(stop_check.session_start_time("s7"), 1234.5)
+
     def test_end_bad_stdin_passes(self):
         out = run_hook("session_end", "")
         self.assertEqual(out.returncode, 0)
