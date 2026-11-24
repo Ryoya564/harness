@@ -3,3 +3,4 @@ _harness/state/
 __pycache__/
 *.pyc
 .superpowers/
+_harness/journal/active/
