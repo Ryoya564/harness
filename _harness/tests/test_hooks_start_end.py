@@ -95,6 +95,14 @@ class SessionEndTest(unittest.TestCase):
         self.assertNotEqual(lib.read_task(tid)[0]["touched"], "old")
         self.assertEqual(lib.get_active("s1"), tid)
 
+    def test_end_records_closed_task(self):
+        import close_task
+        tid = new_task.create("x", "chore", "demo", session="s1")
+        self.assertEqual(close_task.close(tid), 0)
+        session_end.record({"session_id": "s1", "transcript_path": "/a", "reason": "exit"})
+        row = json.loads(self.jsonl.read_text().splitlines()[0])
+        self.assertEqual(row["task_id"], tid)
+
     def test_end_bad_stdin_passes(self):
         out = run_hook("session_end", "")
         self.assertEqual(out.returncode, 0)

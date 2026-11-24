@@ -15,6 +15,9 @@ def record(payload: dict) -> None:
     if not sid:
         return
     task_id = lib.get_active(sid)
+    if not task_id:
+        recent = lib.session_tasks(sid)
+        task_id = recent[0] if recent else None
     path = lib.journal_dir() / "sessions.jsonl"
     rows = []
     if path.exists():

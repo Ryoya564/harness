@@ -10,6 +10,7 @@ cd ~/dev/harness && claude
 # 例: 「ISSUES.md の #1 を直して」
 ```
 
+- 初回起動時は信頼ダイアログを承認する（未承認だと settings.json の permissions が無視される）。
 - SessionStart hook が、未完了タスク・未着手 Issue・doctor の要約を最初に示す。
 - 開発の手順は `.claude/skills/dev-task/SKILL.md`。完了は `close_task.py` の exit 0 だけ。
 - 記録漏れのまま終わろうとすると、Stop hook が止める（同じ状態では1回だけ）。

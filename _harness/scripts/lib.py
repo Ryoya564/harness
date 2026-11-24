@@ -215,6 +215,13 @@ def clear_active(session_id: str) -> None:
         p.unlink()
 
 
+def session_tasks(session_id: str) -> list[str]:
+    """TASK.md の sessions にこのセッションを含むタスクID（touched の新しい順）。"""
+    hits = [t for t in all_tasks() if session_id in (t.get("sessions") or [])]
+    hits.sort(key=lambda t: str(t.get("touched", "")), reverse=True)
+    return [str(t["id"]) for t in hits]
+
+
 def resolve_task(task_id: str | None, session_id: str | None) -> str:
     if task_id:
         task_dir(task_id)

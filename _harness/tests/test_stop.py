@@ -55,6 +55,22 @@ class StopHookTest(unittest.TestCase):
         self.assertTrue(res["reason"].startswith("記録漏れがあります。"))
         self.assertIn("タスクが割り当てられていません", res["reason"])
 
+    def test_a_not_after_task_closed_in_session(self):
+        import close_task
+        tid = new_task.create("demo", "bugfix", "demo", session="s1")
+        self.touch_repo()
+        self.assertEqual(close_task.close(tid), 0)
+        tr = self.transcript(self.repo / "a.py")
+        self.assertIsNone(stop_check.evaluate(self.payload(transcript=tr), self.now))
+
+    def test_a_dirty_after_task_closed_still_blocks(self):
+        import close_task
+        tid = new_task.create("demo", "bugfix", "demo", session="s1")
+        self.assertEqual(close_task.close(tid), 0)
+        self.touch_repo("late.py")
+        res = stop_check.evaluate(self.payload(), self.now)
+        self.assertIn("タスクが割り当てられていません", res["reason"])
+
     def test_a_ignores_edits_outside_repos(self):
         tr = self.transcript(self.root / "_harness/context/PROFILE.md")
         self.assertIsNone(stop_check.evaluate(self.payload(transcript=tr), self.now))

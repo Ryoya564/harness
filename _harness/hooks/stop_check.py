@@ -90,7 +90,10 @@ def evaluate(payload: dict, now: float) -> dict | None:
     hits: list[tuple[str, str]] = []  # (指紋, 理由の行)
 
     if not task_id:
-        edits = edited_repo_paths(payload.get("transcript_path"))
+        # このセッションで既にタスクを扱っていれば（close 済みなど）、過去の編集は記録済みとみなす。
+        # 未記録の変更は git の dirty で拾う。
+        edits = set() if lib.session_tasks(sid) else edited_repo_paths(
+            payload.get("transcript_path"))
         dirty = [d for r in sorted((lib.harness_root() / "repos").glob("*/"))
                  for d in dirty_files(r)]
         if edits or dirty:
