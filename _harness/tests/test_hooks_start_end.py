@@ -48,6 +48,14 @@ class SessionStartTest(unittest.TestCase):
         self.assertIn("abc", data["hookSpecificOutput"]["additionalContext"])
         self.assertEqual(env_file.read_text(), "export HARNESS_SESSION_ID=abc\n")
 
+    def test_start_runs_doctor_weekly(self):
+        ctx = session_start.build_context({"session_id": "s9"}, time.time())
+        self.assertIn("## doctor", ctx)
+        self.assertIn("NG", ctx.split("## doctor")[1])
+        self.assertTrue((self.root / "_harness/state/doctor-last-run").exists())
+        ctx2 = session_start.build_context({"session_id": "s9"}, time.time())
+        self.assertNotIn("## doctor", ctx2)
+
     def test_bad_stdin_passes(self):
         out = run_hook("session_start", "{bad")
         self.assertEqual(out.returncode, 0)
